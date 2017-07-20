@@ -1,15 +1,16 @@
 package variable_test
 
 import (
-	"bytes"
-	"fmt"
-	"io"
-	"io/ioutil"
-	"net/http"
-	"net/http/httputil"
 	"net/url"
+	"net/http"
 	"testing"
+	"io/ioutil"
+	"bytes"
+	"io"
 	"httpvariables"
+	"net/http/httputil"
+	"fmt"
+	"lymbic/src/deps/src/github.com/stretchr/testify/assert"
 )
 
 /*
@@ -24,6 +25,7 @@ type variableReplaceTest struct {
 	// variables to use for replacing.
 	Variables string
 	// request to replace varibales in.
+
 	Req *http.Request
 	// Optional []byte or func() io.ReadCloser to populate Req.Body
 	Body interface{}
@@ -69,230 +71,188 @@ var reqReplaceVarsTests = []variableReplaceTest{
 			"Keep-Alive: 300\r\n" +
 			"Proxy-Connection: keep-alive\r\n\r\n",
 	},
-	//{
-	//	Description: "Simple: If variable doesn't exist don't modify request.",
-	//	Req: &http.Request{
-	//		Method: "GET",
-	//		URL: &url.URL{
-	//			Scheme: "http",
-	//			Host:   "{host}",
-	//			Path:   "/",
-	//		},
-	//		Proto:      "HTTP/1.1",
-	//		ProtoMajor: 1,
-	//		ProtoMinor: 1,
-	//		Header: http.Header{
-	//			"Accept":           {"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"},
-	//			"Accept-Charset":   {"ISO-8859-1,utf-8;q=0.7,*;q=0.7"},
-	//			"Accept-Encoding":  {"gzip,deflate"},
-	//			"Accept-Language":  {"en-us,en;q=0.5"},
-	//			"Keep-Alive":       {"300"},
-	//			"Proxy-Connection": {"keep-alive"},
-	//			"User-Agent":       {"Fake"},
-	//		},
-	//		Body:  nil,
-	//		Close: false,
-	//		Host:  "www.techcrunch.com",
-	//		Form:  map[string][]string{},
-	//	},
-	//	Variables: `{
-     // "host2": "www.techcrunch.com"
-	//}`,
-	//	Expected: "GET / HTTP/1.1\r\n" +
-	//		"Host: {host}\r\n" +
-	//		"User-Agent: Fake\r\n" +
-	//		"Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n" +
-	//		"Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7\r\n" +
-	//		"Accept-Encoding: gzip,deflate\r\n" +
-	//		"Accept-Language: en-us,en;q=0.5\r\n" +
-	//		"Keep-Alive: 300\r\n" +
-	//		"Proxy-Connection: keep-alive\r\n\r\n",
-	//},
-	//{
-	//	Description: "Simple: Should replace any variables that exist, and for missing variables don't modify the reqeust.",
-	//	Req: &http.Request{
-	//		Method: "{method}",
-	//		URL: &url.URL{
-	//			Scheme: "http",
-	//			Host:   "{host}",
-	//			Path:   "/",
-	//		},
-	//		Proto:      "HTTP/1.1",
-	//		ProtoMajor: 1,
-	//		ProtoMinor: 1,
-	//		Header: http.Header{
-	//			"Accept":           {"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"},
-	//			"Accept-Charset":   {"ISO-8859-1,utf-8;q=0.7,*;q=0.7"},
-	//			"Accept-Encoding":  {"gzip,deflate"},
-	//			"Accept-Language":  {"en-us,en;q=0.5"},
-	//			"Keep-Alive":       {"300"},
-	//			"Proxy-Connection": {"keep-alive"},
-	//			"User-Agent":       {"Fake"},
-	//		},
-	//		Body:  nil,
-	//		Close: false,
-	//		Host:  "www.techcrunch.com",
-	//		Form:  map[string][]string{},
-	//	},
-	//	Variables: `{
-     // "host": "www.techcrunch.com"
-	//}`,
-	//	Expected: "{method} / HTTP/1.1\r\n" +
-	//		"Host: www.techcrunch.com\r\n" +
-	//		"User-Agent: Fake\r\n" +
-	//		"Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n" +
-	//		"Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7\r\n" +
-	//		"Accept-Encoding: gzip,deflate\r\n" +
-	//		"Accept-Language: en-us,en;q=0.5\r\n" +
-	//		"Keep-Alive: 300\r\n" +
-	//		"Proxy-Connection: keep-alive\r\n\r\n",
-	//},
-	//{
-	//	Description: "Simple: Replace request host with variable",
-	//	Req: &http.Request{
-	//		Method: "GET",
-	//		URL: &url.URL{
-	//			Scheme: "http",
-	//			Host:   "{host}",
-	//			Path:   "/",
-	//		},
-	//		Proto:      "HTTP/1.1",
-	//		ProtoMajor: 1,
-	//		ProtoMinor: 1,
-	//		Header: http.Header{
-	//			"Accept":           {"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"},
-	//			"Accept-Charset":   {"ISO-8859-1,utf-8;q=0.7,*;q=0.7"},
-	//			"Accept-Encoding":  {"gzip,deflate"},
-	//			"Accept-Language":  {"en-us,en;q=0.5"},
-	//			"Keep-Alive":       {"300"},
-	//			"Proxy-Connection": {"keep-alive"},
-	//			"User-Agent":       {"Fake"},
-	//		},
-	//		Body:  nil,
-	//		Close: false,
-	//		Host:  "www.techcrunch.com",
-	//		Form:  map[string][]string{},
-	//	},
-	//	Variables: `{
-     // "host": "techcrunch.com"
-	//}`,
-	//	Expected: "GET / HTTP/1.1\r\n" +
-	//		"Host: techcrunch.com\r\n" +
-	//		"User-Agent: Fake\r\n" +
-	//		"Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n" +
-	//		"Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7\r\n" +
-	//		"Accept-Encoding: gzip,deflate\r\n" +
-	//		"Accept-Language: en-us,en;q=0.5\r\n" +
-	//		"Keep-Alive: 300\r\n" +
-	//		"Proxy-Connection: keep-alive\r\n\r\n",
-	//},
-	//{
-	//	Description: "Simple: Replace request query string with variable",
-	//	Req: &http.Request{
-	//		Method: "GET",
-	//		URL: &url.URL{
-	//			Scheme:   "http",
-	//			Host:     "todos.stoplight.io",
-	//			Path:     "/todos",
-	//			RawQuery: "apikey={apikey}",
-	//		},
-	//		Proto:      "HTTP/1.1",
-	//		ProtoMajor: 1,
-	//		ProtoMinor: 1,
-	//		Header: http.Header{
-	//			"Accept":           {"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"},
-	//			"Accept-Charset":   {"ISO-8859-1,utf-8;q=0.7,*;q=0.7"},
-	//			"Accept-Encoding":  {"gzip,deflate"},
-	//			"Accept-Language":  {"en-us,en;q=0.5"},
-	//			"Keep-Alive":       {"300"},
-	//			"Proxy-Connection": {"keep-alive"},
-	//			"User-Agent":       {"Fake"},
-	//		},
-	//		Body:  nil,
-	//		Close: false,
-	//		Host:  "todos.stoplight.io",
-	//		Form:  map[string][]string{},
-	//	},
-	//	Variables: `{
-     // "apikey": "123"
-	//}`,
-	//	Expected: "GET /todos?apikey=123 HTTP/1.1\r\n" +
-	//		"Host: todos.stoplight.io\r\n" +
-	//		"User-Agent: Fake\r\n" +
-	//		"Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n" +
-	//		"Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7\r\n" +
-	//		"Accept-Encoding: gzip,deflate\r\n" +
-	//		"Accept-Language: en-us,en;q=0.5\r\n" +
-	//		"Keep-Alive: 300\r\n" +
-	//		"Proxy-Connection: keep-alive\r\n\r\n",
-	//},
-	//{
-	//	Description: "Simple: Replace request query string with variable that is a number",
-	//	Req: &http.Request{
-	//		Method: "GET",
-	//		URL: &url.URL{
-	//			Scheme:   "http",
-	//			Host:     "todos.stoplight.io",
-	//			Path:     "/todos",
-	//			RawQuery: "apikey={apikey}",
-	//		},
-	//		Proto:      "HTTP/1.1",
-	//		ProtoMajor: 1,
-	//		ProtoMinor: 1,
-	//		Header: http.Header{
-	//			"Accept":           {"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"},
-	//			"Accept-Charset":   {"ISO-8859-1,utf-8;q=0.7,*;q=0.7"},
-	//			"Accept-Encoding":  {"gzip,deflate"},
-	//			"Accept-Language":  {"en-us,en;q=0.5"},
-	//			"Keep-Alive":       {"300"},
-	//			"Proxy-Connection": {"keep-alive"},
-	//			"User-Agent":       {"Fake"},
-	//		},
-	//		Body:  nil,
-	//		Close: false,
-	//		Host:  "todos.stoplight.io",
-	//		Form:  map[string][]string{},
-	//	},
-	//	Variables: `{
-     // "apikey": 123
-	//}`,
-	//	Expected: "GET /todos?apikey=123 HTTP/1.1\r\n" +
-	//		"Host: todos.stoplight.io\r\n" +
-	//		"User-Agent: Fake\r\n" +
-	//		"Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n" +
-	//		"Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7\r\n" +
-	//		"Accept-Encoding: gzip,deflate\r\n" +
-	//		"Accept-Language: en-us,en;q=0.5\r\n" +
-	//		"Keep-Alive: 300\r\n" +
-	//		"Proxy-Connection: keep-alive\r\n\r\n",
-	//},
-	//{
-	//	Description: "Nested: Replace request host and path with variable",
-	//	Req: &http.Request{
-	//		Method: "GET",
-	//		URL: &url.URL{
-	//			Scheme: "http",
-	//			Host:   "www.{url.host}",
-	//			Path:   "{url.path}",
-	//		},
-	//		ProtoMajor:       1,
-	//		ProtoMinor:       1,
-	//		Header:           http.Header{},
-	//		TransferEncoding: []string{"chunked"},
-	//	},
-	//	Body: []byte("abcdef"),
-	//	Variables: `{
-     // "url": {
-     //   "host": "google.com",
-     //   "path": "/search"
-     // },
-	//}`,
-	//	Expected: "GET /search HTTP/1.1\r\n" +
-	//		"Host: www.google.com\r\n" +
-	//		"User-Agent: Go-http-client/1.1\r\n" +
-	//		"Transfer-Encoding: chunked\r\n\r\n" +
-	//		chunk("abcdef") + chunk(""),
-	//},
+	{
+		Description: "Simple: If variable doesn't exist don't modify request.",
+		Req: &http.Request{
+			Method: "GET",
+			URL: &url.URL{
+				Scheme: "http",
+				Host:   "{host}",
+				Path:   "/",
+			},
+			Proto:      "HTTP/1.1",
+			ProtoMajor: 1,
+			ProtoMinor: 1,
+			Header: http.Header{
+				"Accept":           {"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"},
+				"Accept-Charset":   {"ISO-8859-1,utf-8;q=0.7,*;q=0.7"},
+				"Accept-Encoding":  {"gzip,deflate"},
+				"Accept-Language":  {"en-us,en;q=0.5"},
+				"Keep-Alive":       {"300"},
+				"Proxy-Connection": {"keep-alive"},
+				"User-Agent":       {"Fake"},
+			},
+			Body:  nil,
+			Close: false,
+			//Host:  "www.techcrunch.com",
+			Form:  map[string][]string{},
+		},
+		Variables: `{
+      "host2": "www.techcrunch.com"
+	}`,
+		Expected: "GET / HTTP/1.1\r\n" +
+			"Host: {host}\r\n" +
+			"User-Agent: Fake\r\n" +
+			"Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n" +
+			"Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7\r\n" +
+			"Accept-Encoding: gzip,deflate\r\n" +
+			"Accept-Language: en-us,en;q=0.5\r\n" +
+			"Keep-Alive: 300\r\n" +
+			"Proxy-Connection: keep-alive\r\n\r\n",
+	},
+	{
+		Description: "Simple: Replace request host with variable",
+		Req: &http.Request{
+			Method: "GET",
+			URL: &url.URL{
+				Scheme: "http",
+				Host:   "{host}",
+				Path:   "/",
+			},
+			Proto:      "HTTP/1.1",
+			ProtoMajor: 1,
+			ProtoMinor: 1,
+			Header: http.Header{
+				"Accept":           {"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"},
+				"Accept-Charset":   {"ISO-8859-1,utf-8;q=0.7,*;q=0.7"},
+				"Accept-Encoding":  {"gzip,deflate"},
+				"Accept-Language":  {"en-us,en;q=0.5"},
+				"Keep-Alive":       {"300"},
+				"Proxy-Connection": {"keep-alive"},
+				"User-Agent":       {"Fake"},
+			},
+			Body:  nil,
+			Close: false,
+			Form:  map[string][]string{},
+		},
+		Variables: `{
+      "host": "techcrunch.com"
+	}`,
+		Expected: "GET / HTTP/1.1\r\n" +
+			"Host: techcrunch.com\r\n" +
+			"User-Agent: Fake\r\n" +
+			"Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n" +
+			"Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7\r\n" +
+			"Accept-Encoding: gzip,deflate\r\n" +
+			"Accept-Language: en-us,en;q=0.5\r\n" +
+			"Keep-Alive: 300\r\n" +
+			"Proxy-Connection: keep-alive\r\n\r\n",
+	},
+	{
+		Description: "Simple: Replace request query string with variable",
+		Req: &http.Request{
+			Method: "GET",
+			URL: &url.URL{
+				Scheme:   "http",
+				Host:     "todos.stoplight.io",
+				Path:     "/todos",
+				RawQuery: "apikey={apikey}",
+			},
+			Proto:      "HTTP/1.1",
+			ProtoMajor: 1,
+			ProtoMinor: 1,
+			Header: http.Header{
+				"Accept":           {"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"},
+				"Accept-Charset":   {"ISO-8859-1,utf-8;q=0.7,*;q=0.7"},
+				"Accept-Encoding":  {"gzip,deflate"},
+				"Accept-Language":  {"en-us,en;q=0.5"},
+				"Keep-Alive":       {"300"},
+				"Proxy-Connection": {"keep-alive"},
+				"User-Agent":       {"Fake"},
+			},
+			Body:  nil,
+			Close: false,
+			Form:  map[string][]string{},
+		},
+		Variables: `{
+      "apikey": "123"
+	}`,
+		Expected: "GET /todos?apikey=123 HTTP/1.1\r\n" +
+			"Host: todos.stoplight.io\r\n" +
+			"User-Agent: Fake\r\n" +
+			"Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n" +
+			"Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7\r\n" +
+			"Accept-Encoding: gzip,deflate\r\n" +
+			"Accept-Language: en-us,en;q=0.5\r\n" +
+			"Keep-Alive: 300\r\n" +
+			"Proxy-Connection: keep-alive\r\n\r\n",
+	},
+	{
+		Description: "Simple: Replace request query string with variable that is a number",
+		Req: &http.Request{
+			Method: "GET",
+			URL: &url.URL{
+				Scheme:   "http",
+				Host:     "todos.stoplight.io",
+				Path:     "/todos",
+				RawQuery: "apikey={apikey}",
+			},
+			Proto:      "HTTP/1.1",
+			ProtoMajor: 1,
+			ProtoMinor: 1,
+			Header: http.Header{
+				"Accept":           {"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"},
+				"Accept-Charset":   {"ISO-8859-1,utf-8;q=0.7,*;q=0.7"},
+				"Accept-Encoding":  {"gzip,deflate"},
+				"Accept-Language":  {"en-us,en;q=0.5"},
+				"Keep-Alive":       {"300"},
+				"Proxy-Connection": {"keep-alive"},
+				"User-Agent":       {"Fake"},
+			},
+			Body:  nil,
+			Close: false,
+			Form:  map[string][]string{},
+		},
+		Variables: `{
+      "apikey": 123
+	}`,
+		Expected: "GET /todos?apikey=123 HTTP/1.1\r\n" +
+			"Host: todos.stoplight.io\r\n" +
+			"User-Agent: Fake\r\n" +
+			"Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n" +
+			"Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7\r\n" +
+			"Accept-Encoding: gzip,deflate\r\n" +
+			"Accept-Language: en-us,en;q=0.5\r\n" +
+			"Keep-Alive: 300\r\n" +
+			"Proxy-Connection: keep-alive\r\n\r\n",
+	},
+	{
+		Description: "Nested: Replace request host and path with variable",
+		Req: &http.Request{
+			Method: "GET",
+			URL: &url.URL{
+				Scheme: "http",
+				Host:   "www.{url.host}",
+				Path:   "{url.path}",
+			},
+			ProtoMajor:       1,
+			ProtoMinor:       1,
+			Header:           http.Header{},
+			TransferEncoding: []string{"chunked"},
+		},
+		Body: []byte("abcdef"),
+		Variables: `{
+      "url": {
+        "host": "google.com",
+        "path": "/search"
+      }
+	}`,
+		Expected: "GET /search HTTP/1.1\r\n" +
+			"Host: www.google.com\r\n" +
+			"User-Agent: Go-http-client/1.1\r\n" +
+			"Transfer-Encoding: chunked\r\n\r\n" +
+			chunk("abcdef") + chunk(""),
+	},
 	//{
 	//	Description: "Simple: Replace request (plain) body with variable.",
 	//	Req: &http.Request{
@@ -403,10 +363,11 @@ func TestRequestReplaceVariables(t *testing.T) {
 		}
 
 		// TODO: Call replace variable function here.
-		variable.ReplaceVariable()
+		variable.PopulateRequestTemplate(tt.Req, tt.Variables)
 
 		dump, err := httputil.DumpRequestOut(tt.Req, true)
 		if err != nil {
+			fmt.Println(err, "ERRRORRORORO")
 			t.Errorf("Test %s, error building reqeust %s.", tt.Description, err.Error())
 		}
 
@@ -419,6 +380,53 @@ func TestRequestReplaceVariables(t *testing.T) {
 		}
 	}
 }
+
+func Test_it_replaces_existing_variables_and_ignores_non_existent_variables(t *testing.T) {
+	tt := variableReplaceTest{
+			Description: "Simple: Should replace any variables that exist, and for missing variables don't modify the reqeust.",
+			Req: &http.Request{
+				Method: "{method}",
+				URL: &url.URL{
+					Scheme: "http",
+					Host:   "{host}",
+					Path:   "/",
+				},
+				Proto:      "HTTP/1.1",
+				ProtoMajor: 1,
+				ProtoMinor: 1,
+				Header: http.Header{
+					"Accept":           {"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"},
+					"Accept-Charset":   {"ISO-8859-1,utf-8;q=0.7,*;q=0.7"},
+					"Accept-Encoding":  {"gzip,deflate"},
+					"Accept-Language":  {"en-us,en;q=0.5"},
+					"Keep-Alive":       {"300"},
+					"Proxy-Connection": {"keep-alive"},
+					"User-Agent":       {"Fake"},
+				},
+				Body:  nil,
+				Close: false,
+				Form:  map[string][]string{},
+			},
+			Variables: `{
+      		"host": "www.techcrunch.com"
+		}`,
+			Expected: "{method} / HTTP/1.1\r\n" +
+				"Host: www.techcrunch.com\r\n" +
+				"User-Agent: Fake\r\n" +
+				"Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n" +
+				"Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7\r\n" +
+				"Accept-Encoding: gzip,deflate\r\n" +
+				"Accept-Language: en-us,en;q=0.5\r\n" +
+				"Keep-Alive: 300\r\n" +
+				"Proxy-Connection: keep-alive\r\n\r\n",
+	}
+
+	variable.PopulateRequestTemplate(tt.Req, tt.Variables)
+
+	assert.Equal(t, "{method}", tt.Req.Method)
+	assert.Equal(t, "www.techcrunch.com", tt.Req.URL.Host)
+}
+
 
 func chunk(s string) string {
 	return fmt.Sprintf("%x\r\n%s\r\n", len(s), s)
