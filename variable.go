@@ -10,6 +10,7 @@ import (
 	"github.com/pytlesk4/m"
 	"bytes"
 	"errors"
+	"io/ioutil"
 )
 
 // TODO: implement replace variables functions.
@@ -29,11 +30,17 @@ func PopulateRequestTemplate(req *http.Request, variables string) {
 		fmt.Println("EMPTTYTYTY2")
 		return
 	}
+	if req.Body != nil {
+		body, _ := ioutil.ReadAll(req.Body)
+		req.Body = ioutil.NopCloser(bytes.NewReader([]byte(ReplaceVariable(string(body), variableData))))
+	}
 
-	req.Method = replaceVariable(req.Method, variableData)
-	req.URL.Host = replaceVariable(req.URL.Host, variableData)
-	req.URL.RawQuery = replaceVariable(req.URL.RawQuery, variableData)
-	req.URL.Path = replaceVariable(req.URL.Path, variableData)
+
+	req.Method = ReplaceVariable(req.Method, variableData)
+	req.URL.Host = ReplaceVariable(req.URL.Host, variableData)
+	req.URL.RawQuery = ReplaceVariable(req.URL.RawQuery, variableData)
+	req.URL.Path = ReplaceVariable(req.URL.Path, variableData)
+
 }
 
 func getValueFromMap(mappy map[string]interface{}, key string) (string, error) {
@@ -45,7 +52,7 @@ func getValueFromMap(mappy map[string]interface{}, key string) (string, error) {
 func getValueFromMap1(mappy map[string]interface{}, key []string) (string, error) {
 	if len(key) > 1 {
 		if _, ok := mappy[key[0]]; !ok {
-			return nil, errors.New("value for key not found")
+			return ``, errors.New("value for key not found")
 		}
 
 		return getValueFromMap1(mappy, key[1:])
@@ -60,7 +67,7 @@ func getValueFromMap1(mappy map[string]interface{}, key []string) (string, error
 
 
 
-func replaceVariable(input string, variableData map[string]interface{}) string {
+func ReplaceVariable(input string, variableData map[string]interface{}) string {
 	var scn scanner.Scanner
 	var ret bytes.Buffer
 
@@ -70,27 +77,34 @@ func replaceVariable(input string, variableData map[string]interface{}) string {
 	tok := scn.Scan()
 
 	inAction := false
+	action := ``
 	for tok != scanner.EOF {
 
 		if tok == '{' {
 			inAction = true
 			tok = scn.Scan()
 			continue
-		} else if (tok == '}') {
-			inAction = false
-			tok = scn.Scan()
-			continue
-		}
 
-		if inAction {
-			val := m.Get(variableData, scn.TokenText())
-			if val == nil {
-				fmt.Println("NOBODY", scn.TokenText(), variableData)
-				ret.WriteString("{" + scn.TokenText() + "}")
-			} else {
-				fmt.Println("NOBODY2", val, scn.TokenText(), variableData)
-				ret.WriteString(fmt.Sprintf("%v", val))
+		} else if (tok == '}') {
+			if inAction {
+				inAction = false
+
+				val := m.Get(variableData, action)
+				val1, err := getValueFromMap(variableData, action)
+				fmt.Println("HHHHH", val, `|`, val1, `|`, err, `|`, action, `|VD: `, variableData)
+
+				if val == nil {
+					ret.WriteString("{" + action + "}")
+				} else {
+					ret.WriteString(fmt.Sprintf("%v", val))
+				}
 			}
+
+			action = ``
+			inAction = false
+
+		} else if inAction {
+			action += scn.TokenText()
 
 		} else {
 			ret.WriteString(scn.TokenText())
@@ -98,6 +112,10 @@ func replaceVariable(input string, variableData map[string]interface{}) string {
 
 		tok = scn.Scan()
 	}
+
+
+
+	fmt.Println("RERERERER", ret.String())
 
 	return ret.String()
 

@@ -250,35 +250,37 @@ var reqReplaceVarsTests = []variableReplaceTest{
 		Expected: "GET /search HTTP/1.1\r\n" +
 			"Host: www.google.com\r\n" +
 			"User-Agent: Go-http-client/1.1\r\n" +
-			"Transfer-Encoding: chunked\r\n\r\n" +
+			"Transfer-Encoding: chunked\r\n" +
+			"Accept-Encoding: gzip\r\n\r\n" +
 			chunk("abcdef") + chunk(""),
 	},
-	//{
-	//	Description: "Simple: Replace request (plain) body with variable.",
-	//	Req: &http.Request{
-	//		Method: "POST",
-	//		URL: &url.URL{
-	//			Scheme: "http",
-	//			Host:   "www.google.com",
-	//			Path:   "/search",
-	//		},
-	//		ProtoMajor:       1,
-	//		ProtoMinor:       1,
-	//		Header:           http.Header{},
-	//		Close:            true,
-	//		TransferEncoding: []string{"chunked"},
-	//	},
-	//	Body: []byte("{body}"),
-	//	Variables: `{
-     // "body": "abcdef",
-	//}`,
-	//	Expected: "POST /search HTTP/1.1\r\n" +
-	//		"Host: www.google.com\r\n" +
-	//		"User-Agent: Go-http-client/1.1\r\n" +
-	//		"Connection: close\r\n" +
-	//		"Transfer-Encoding: chunked\r\n\r\n" +
-	//		chunk("abcdef") + chunk(""),
-	//},
+	{
+		Description: "Simple: Replace request (plain) body with variable.",
+		Req: &http.Request{
+			Method: "POST",
+			URL: &url.URL{
+				Scheme: "http",
+				Host:   "www.google.com",
+				Path:   "/search",
+			},
+			ProtoMajor:       1,
+			ProtoMinor:       1,
+			Header:           http.Header{},
+			Close:            true,
+			TransferEncoding: []string{"chunked"},
+		},
+		Body: []byte("{body}"),
+		Variables: `{
+      "body": "abcdef"
+	}`,
+		Expected: "POST /search HTTP/1.1\r\n" +
+			"Host: www.google.com\r\n" +
+			"User-Agent: Go-http-client/1.1\r\n" +
+			"Connection: close\r\n" +
+			"Transfer-Encoding: chunked\r\n" +
+			"Accept-Encoding: gzip\r\n\r\n" +
+			chunk("abcdef") + chunk(""),
+	},
 
 	// TODO: Add a request with json body, and replace variables on it.
 	// TODO: Add a request with url encoded body and replace variables on it.
@@ -317,7 +319,7 @@ var reqReplaceVarsTests = []variableReplaceTest{
 	//    Close:            true,
 	//    TransferEncoding: []string{"chunked"},
 	//  },
-	//  Body: []byte("{{key}"),
+	//  Body: []byte("{{key}}"),
 	//  Variables: `{
 	//    "key": "body",
 	//    "body": "abcdef",
