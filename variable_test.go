@@ -10,7 +10,7 @@ import (
 	"httpvariables"
 	"net/http/httputil"
 	"fmt"
-	"lymbic/src/deps/src/github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 /*
@@ -283,6 +283,9 @@ var reqReplaceVarsTests = []variableReplaceTest{
 	},
 
 	// TODO: Add a request with json body, and replace variables on it.
+
+
+
 	// TODO: Add a request with url encoded body and replace variables on it.
 	// TODO: Add a request with xml body, and replace a variable in it.
 	// TODO: Add a request and replace a header value with a variable.
@@ -304,33 +307,34 @@ var reqReplaceVarsTests = []variableReplaceTest{
 	// TODO: Make replace variable function generic, so that any object can be passed into it. Ideally, this is what you would start out with first, then create a replace variable function for handling requests.
 	// TODO: Uncomment test case below. Body is {{key}}, and body should equal abcdef.
 	// TODO TIP: You will need to run variable replacement twice, phase one will replace key with body {body}, and the second phase will replace {body} with abcdef.
-	//{
-	//  Description: Bonus: Replace request body with nested variable syntax.",
-	//  Req: &http.Request{
-	//    Method: "POST",
-	//    URL: &url.URL{
-	//      Scheme: "http",
-	//      Host:   "www.google.com",
-	//      Path:   "/search",
-	//    },
-	//    ProtoMajor:       1,
-	//    ProtoMinor:       1,
-	//    Header:           http.Header{},
-	//    Close:            true,
-	//    TransferEncoding: []string{"chunked"},
-	//  },
-	//  Body: []byte("{{key}}"),
-	//  Variables: `{
-	//    "key": "body",
-	//    "body": "abcdef",
-	//  }`,
-	//  Expected: "POST /search HTTP/1.1\r\n" +
-	//    "Host: www.google.com\r\n" +
-	//    "User-Agent: Go-http-client/1.1\r\n" +
-	//    "Connection: close\r\n" +
-	//    "Transfer-Encoding: chunked\r\n\r\n" +
-	//    chunk("abcdef") + chunk(""),
-	//},
+	{
+	  Description: "Bonus: Replace request body with nested variable syntax.",
+	  Req: &http.Request{
+	    Method: "POST",
+	    URL: &url.URL{
+	      Scheme: "http",
+	      Host:   "www.google.com",
+	      Path:   "/search",
+	    },
+	    ProtoMajor:       1,
+	    ProtoMinor:       1,
+	    Header:           http.Header{},
+	    Close:            true,
+	    TransferEncoding: []string{"chunked"},
+	  },
+	  Body: []byte("{{key}}"),
+	  Variables: `{
+	    "key": "body",
+	    "body": "abcdef"
+	  }`,
+	  Expected: "POST /search HTTP/1.1\r\n" +
+	    "Host: www.google.com\r\n" +
+	    "User-Agent: Go-http-client/1.1\r\n" +
+	    "Connection: close\r\n" +
+	    "Transfer-Encoding: chunked\r\n" +
+	    "Accept-Encoding: gzip\r\n\r\n" +
+	    chunk("abcdef") + chunk(""),
+	},
 	// TODO: Add a request with form-data body(no file) and replace variables on it.
 	// TODO: Add a request with form-data body(Should have a file, file doesn't need to a be a variable but you need to make sure the file is still there after replacing variables) and replace variables on it.
 	// TODO: Handle a request url has extra slashes and a varible. Replace the variable and clean up the request url.
@@ -345,6 +349,7 @@ var reqReplaceVarsTests = []variableReplaceTest{
 
 func TestRequestReplaceVariables(t *testing.T) {
 	for i := range reqReplaceVarsTests {
+		//fmt.Println(reqReplaceVarsTests[i].Description)
 		tt := &reqReplaceVarsTests[i]
 
 		setBody := func() {
@@ -369,7 +374,6 @@ func TestRequestReplaceVariables(t *testing.T) {
 
 		dump, err := httputil.DumpRequestOut(tt.Req, true)
 		if err != nil {
-			fmt.Println(err, "ERRRORRORORO")
 			t.Errorf("Test %s, error building reqeust %s.", tt.Description, err.Error())
 		}
 
@@ -390,7 +394,7 @@ func Test_it_replaces_existing_variables_and_ignores_non_existent_variables(t *t
 				Method: "{method}",
 				URL: &url.URL{
 					Scheme: "http",
-					Host:   "{host}",
+					Host:   " {host}",
 					Path:   "/",
 				},
 				Proto:      "HTTP/1.1",

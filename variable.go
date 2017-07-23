@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"encoding/json"
-	"github.com/pytlesk4/m"
 	"bytes"
 	"errors"
 	"io/ioutil"
@@ -19,7 +18,6 @@ import (
 
 func PopulateRequestTemplate(req *http.Request, variables string) {
 	if variables == `` {
-		fmt.Println("EMPTTYTYTY")
 		return
 	}
 
@@ -27,9 +25,10 @@ func PopulateRequestTemplate(req *http.Request, variables string) {
 	err := json.Unmarshal([]byte(variables), &variableData)
 	if err != nil {
 		fmt.Println("JSON MARSHAL ERROR ", err)
-		fmt.Println("EMPTTYTYTY2")
+		//fmt.Println("EMPTTYTYTY2")
 		return
 	}
+
 	if req.Body != nil {
 		body, _ := ioutil.ReadAll(req.Body)
 		req.Body = ioutil.NopCloser(bytes.NewReader([]byte(ReplaceVariable(string(body), variableData))))
@@ -70,6 +69,9 @@ func getValueFromMap1(mappy map[string]interface{}, key []string) (string, error
 func ReplaceVariable(input string, variableData map[string]interface{}) string {
 	var scn scanner.Scanner
 	var ret bytes.Buffer
+	var nodes []Node
+
+
 
 	codeReader := strings.NewReader(input)
 
@@ -78,44 +80,69 @@ func ReplaceVariable(input string, variableData map[string]interface{}) string {
 
 	inAction := false
 	action := ``
+	nodeType := NormalNode
 	for tok != scanner.EOF {
-
 		if tok == '{' {
-			inAction = true
-			tok = scn.Scan()
-			continue
+			switch scn.Peek() {
+			case '{':
+				nodeType = DoubleAction
+				scn.Scan()
 
-		} else if (tok == '}') {
-			if inAction {
-				inAction = false
+			case '#':
+				scn.Scan()
+				nodeType = BlocAction
 
-				val := m.Get(variableData, action)
-				val1, err := getValueFromMap(variableData, action)
-				fmt.Println("HHHHH", val, `|`, val1, `|`, err, `|`, action, `|VD: `, variableData)
 
-				if val == nil {
-					ret.WriteString("{" + action + "}")
-				} else {
-					ret.WriteString(fmt.Sprintf("%v", val))
-				}
+			case '/':
+
+
+			default:
+				nodeType = SingleAction
 			}
 
-			action = ``
+			inAction = true
+
+		} else if tok == '}' {
+			if !inAction {
+				node := NewTextNode(WithText(string(tok) + scn.TokenText()))
+
+				nodes = append(nodes, node)
+
+			} else {
+				if nodeType == DoubleAction {
+					scn.Scan()
+				}
+				node := NewActionNode(WithActionType(nodeType),
+										WithActionText(action),
+										WithActionDictionary(variableData))
+
+				nodes = append(nodes, node)
+			}
+
 			inAction = false
+			action = ``
 
 		} else if inAction {
 			action += scn.TokenText()
 
 		} else {
-			ret.WriteString(scn.TokenText())
+			node := NewTextNode(WithText(scn.TokenText()))
+			nodes = append(nodes, node)
 		}
 
 		tok = scn.Scan()
 	}
+	//
+	//for _, val := range nodes {
+	//	fmt.Println(val)
+	//}
+
+	for _, node := range nodes {
+		ret.WriteString(node.String())
+	}
 
 
-
-	fmt.Println("RERERERER", ret.String())
+//	fmt.Println("RERERERER", input, ret.String())
 
 	return ret.String()
 
