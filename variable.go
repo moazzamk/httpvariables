@@ -21,7 +21,7 @@ const (
 // TODO: implement replace variables functions.
 // Variables are valid json, they can be either an array or object.
 
-
+// Replaces template variables in a request.
 func PopulateRequestTemplate(req *http.Request, variables string) {
 	if variables == `` {
 		return
@@ -49,10 +49,10 @@ func PopulateRequestTemplate(req *http.Request, variables string) {
 
 }
 
+// Replaces templates variables in a string
 func ReplaceVariable(input string, variableData map[string]interface{}) string {
 	var ret bytes.Buffer
 	var nodes []Node
-
 
 	codeReader := strings.NewReader(input)
 	scn := bufio.NewScanner(codeReader)
@@ -93,7 +93,7 @@ func ReplaceVariable(input string, variableData map[string]interface{}) string {
 		byties := scn.Bytes()
 		bytiesLen := len(byties)
 		if byties[0] == 123 && byties[bytiesLen-1] == 125 {
-			fmt.Sprintf("%v", byties[1], "YYYYY")
+			//fmt.Sprintf("%v", byties[1], "YYYYY")
 			switch byties[1] {
 			case Brace:
 				nodeType = DoubleAction
