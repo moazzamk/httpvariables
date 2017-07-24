@@ -1,3 +1,6 @@
+** Cloning **:
+```git clone https://github.com/moazzamk/httpvariables variable```
+
 **Background**:
   - https://help.stoplight.io/scenarios/overview/using-environments-and-variables
 
