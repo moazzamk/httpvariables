@@ -116,9 +116,9 @@ func ReplaceVariable(input string, variableData map[string]interface{}) string {
 
 	}
 
-	for _, val := range nodes {
-		fmt.Println("|" + val.String() + "|")
-	}
+	//for _, val := range nodes {
+	//	fmt.Println("|" + val.String() + "|")
+	//}
 
 	for _, node := range nodes {
 		ret.WriteString(node.String())

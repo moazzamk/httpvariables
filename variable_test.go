@@ -341,9 +341,38 @@ var reqReplaceVarsTests = []variableReplaceTest{
 			chunk("<root><node>abcdef</node></root>") + chunk(""),
 	},
 
+	// TODO: Add a request and replace a header value with a variable.
+
+	{
+		Description: "Add a request with xml body, and replace a variable in it.",
+		Req: &http.Request{
+			Method: "POST",
+			URL: &url.URL{
+				Scheme: "http",
+				Host:   "www.google.com",
+				Path:   "/search",
+			},
+			ProtoMajor:       1,
+			ProtoMinor:       1,
+			Header:           http.Header{},
+			Close:            true,
+			TransferEncoding: []string{"chunked"},
+		},
+		Body: []byte("<root><node>{body}</node></root>"),
+		Variables: `{
+      "body": "abcdef"
+	}`,
+		Expected: "POST /search HTTP/1.1\r\n" +
+			"Host: www.google.com\r\n" +
+			"User-Agent: Go-http-client/1.1\r\n" +
+			"Connection: close\r\n" +
+			"Transfer-Encoding: chunked\r\n" +
+			"Accept-Encoding: gzip\r\n\r\n" +
+			chunk("<root><node>abcdef</node></root>") + chunk(""),
+	},
+
 
 	// TODO: Add	 a request with url encoded body and replace variables on it.
-	// TODO: Add a request and replace a header value with a variable.
 	// TODO: Add a request with this header: "Authorization: Bearer {apikey}" and apikey = "123". Result header should be "Authorization: Bearer 123".
 	// TODO: Add a request with this header: "Authorization: Bearer {apikey}" and apikey = 123. Result header should be "Authorization: Bearer 123"
 	// TODO: Add a request with this json body: {"foo": "{bool}"}, and use these variables {"bool": true}. The result body should be {"foo": true}.
