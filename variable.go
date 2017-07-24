@@ -2,14 +2,20 @@ package variable
 
 import (
 	"strings"
-	"text/scanner"
+	"bufio"
 	"fmt"
 	"net/http"
 
 	"encoding/json"
 	"bytes"
-	"errors"
 	"io/ioutil"
+)
+
+const (
+	Brace = byte('{')
+	Hash = byte('#')
+	FSlash = byte('/')
+
 )
 
 // TODO: implement replace variables functions.
@@ -29,6 +35,7 @@ func PopulateRequestTemplate(req *http.Request, variables string) {
 		return
 	}
 
+
 	if req.Body != nil {
 		body, _ := ioutil.ReadAll(req.Body)
 		req.Body = ioutil.NopCloser(bytes.NewReader([]byte(ReplaceVariable(string(body), variableData))))
@@ -42,100 +49,76 @@ func PopulateRequestTemplate(req *http.Request, variables string) {
 
 }
 
-func getValueFromMap(mappy map[string]interface{}, key string) (string, error) {
-	keys := strings.Split(key, ".")
-
-	return getValueFromMap1(mappy, keys)
-}
-
-func getValueFromMap1(mappy map[string]interface{}, key []string) (string, error) {
-	if len(key) > 1 {
-		if _, ok := mappy[key[0]]; !ok {
-			return ``, errors.New("value for key not found")
-		}
-
-		return getValueFromMap1(mappy, key[1:])
- 	} else {
-		if val, ok := mappy[key[0]]; ok {
-			return fmt.Sprintf("%v", val), nil
-		} else {
-			return ``, errors.New("value for key not found")
-		}
-	}
-}
-
-
-
 func ReplaceVariable(input string, variableData map[string]interface{}) string {
-	var scn scanner.Scanner
 	var ret bytes.Buffer
 	var nodes []Node
 
 
-
 	codeReader := strings.NewReader(input)
+	scn := bufio.NewScanner(codeReader)
+	scn.Split(func (data []byte, atEOF bool) (advance int, token []byte, err error) {
+		if atEOF && len(data) == 0 {
+			return 0, nil, nil
+		}
 
-	scn.Init(codeReader)
-	tok := scn.Scan()
+		lenny := len(data)
+		if data[0] == 123 {
+			for i, val := range data {
+				if val == 125 {
+					if i +1 != lenny && data[i + 1] == 125 {
+						return i + 2 , data[0:i+2], nil
+					} else {
+						return i + 1 , data[0:i+1], nil
+					}
+				}
 
-	inAction := false
-	action := ``
-	nodeType := NormalNode
-	for tok != scanner.EOF {
-		if tok == '{' {
-			switch scn.Peek() {
-			case '{':
+				if val == 123 && i != 0 && i != 1 {
+					return i  , data[0:i], nil
+				}
+			}
+		} else {
+			for i, val := range data {
+				if val == 123 {
+					return i  , data[0:i], nil
+				}
+			}
+		}
+
+		return 1, data[0:1], nil
+	})
+
+	var nodeType NodeType
+	var offset int
+	for scn.Scan() {
+		byties := scn.Bytes()
+		bytiesLen := len(byties)
+		if byties[0] == 123 && byties[bytiesLen-1] == 125 {
+			fmt.Sprintf("%v", byties[1], "YYYYY")
+			switch byties[1] {
+			case Brace:
 				nodeType = DoubleAction
-				scn.Scan()
-
-			case '#':
-				scn.Scan()
-				nodeType = BlocAction
-
-
-			case '/':
-
-
+				offset = 2
 			default:
 				nodeType = SingleAction
+				offset = 1
 			}
 
-			inAction = true
+			node := NewActionNode(WithActionType(nodeType),
+								WithActionDictionary(variableData),
+								WithActionText(strings.Trim(string(byties[offset:bytiesLen-offset]), ` `)))
 
-		} else if tok == '}' {
-			if !inAction {
-				node := NewTextNode(WithText(string(tok) + scn.TokenText()))
-
-				nodes = append(nodes, node)
-
-			} else {
-				if nodeType == DoubleAction {
-					scn.Scan()
-				}
-				node := NewActionNode(WithActionType(nodeType),
-										WithActionText(action),
-										WithActionDictionary(variableData))
-
-				nodes = append(nodes, node)
-			}
-
-			inAction = false
-			action = ``
-
-		} else if inAction {
-			action += scn.TokenText()
+			nodes = append(nodes, node)
 
 		} else {
-			node := NewTextNode(WithText(scn.TokenText()))
+			node := NewTextNode(WithText(string(byties)))
 			nodes = append(nodes, node)
 		}
 
-		tok = scn.Scan()
 	}
-	//
-	//for _, val := range nodes {
-	//	fmt.Println(val)
-	//}
+
+	for _, val := range nodes {
+		fmt.Println("|" + val.String() + "|")
+	}
 
 	for _, node := range nodes {
 		ret.WriteString(node.String())
