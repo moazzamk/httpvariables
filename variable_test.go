@@ -7,10 +7,10 @@ import (
 	"io/ioutil"
 	"bytes"
 	"io"
-	"httpvariables"
 	"net/http/httputil"
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"variable"
 )
 
 /*
@@ -282,8 +282,6 @@ var reqReplaceVarsTests = []variableReplaceTest{
 			chunk("abcdef") + chunk(""),
 	},
 
-
-
 	{
 		Description: "Add a request with json body, and replace variables on it.",
 		Req: &http.Request{
@@ -311,6 +309,38 @@ var reqReplaceVarsTests = []variableReplaceTest{
 			"Accept-Encoding: gzip\r\n\r\n" +
 			chunk("{\"body\": \"abcdef\"}") + chunk(""),
 	},
+
+	// TODO: Handle a request with a (invalid json) stringified JSON body "{\"foo\": \"{bar}\"}]", and use these variables {"bar": "bear"}. Expected body is "{\"foo\": \"bear\"}]".
+
+	{
+		Description: "Handle a request with a (invalid json) stringified JSON body",
+		Req: &http.Request{
+			Method: "POST",
+			URL: &url.URL{
+				Scheme: "http",
+				Host:   "www.google.com",
+				Path:   "/search",
+			},
+			ProtoMajor:       1,
+			ProtoMinor:       1,
+			Header:           http.Header{},
+			Close:            true,
+			TransferEncoding: []string{"chunked"},
+		},
+		Body: []byte("{\"foo\": \"{bar}\"}]"),
+		Variables: `{
+      "bar": "bear"
+	}`,
+		Expected: "POST /search HTTP/1.1\r\n" +
+			"Host: www.google.com\r\n" +
+			"User-Agent: Go-http-client/1.1\r\n" +
+			"Connection: close\r\n" +
+			"Transfer-Encoding: chunked\r\n" +
+			"Accept-Encoding: gzip\r\n\r\n" +
+			chunk("{\"foo\": \"bear\"}]") + chunk(""),
+	},
+
+
 
 	// TODO: Add a request with xml body, and replace a variable in it.
 	{
