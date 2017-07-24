@@ -1,4 +1,4 @@
-** Cloning ** :
+**Cloning** :
 ```git clone https://github.com/moazzamk/httpvariables variable```
 
 **Background**:
