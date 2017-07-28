@@ -44,24 +44,31 @@ func NewActionNode(options ...ActionNodeOption) *ActionNode {
 	return ret
 }
 
+// WithActionType is used as an argument for NewActionNode. It helps create a new action node with
+// the specified type
 func WithActionType(nodeType NodeType) ActionNodeOption {
 	return func (node *ActionNode) {
 		node.Type = nodeType
 	}
 }
 
+// WithActionText is used as an argument for NewActionNode. It helps create a new action node with
+// the specified text
 func WithActionText(nodeText string) ActionNodeOption {
 	return func (node *ActionNode) {
 		node.Text = nodeText
 	}
 }
 
+// WithActionType is used as an argument for NewActionNode. It helps create a new action node with
+// the specified dictionary (of template variables)
 func WithActionDictionary(dict map[string]interface{}) ActionNodeOption {
 	return func (node *ActionNode) {
 		node.Dict = dict
 	}
 }
 
+// String returns rendered template as a string
 func (r *ActionNode) String() string {
 	val := m.Get(r.Dict, r.Text)
 	if val == nil {
@@ -85,6 +92,7 @@ type TextNode struct {
 	Text string
 }
 
+// NewTextNode returns a new text node
 func NewTextNode(options ...TextNodeOption) *TextNode {
 	ret := &TextNode{}
 
@@ -95,13 +103,17 @@ func NewTextNode(options ...TextNodeOption) *TextNode {
 	return ret
 }
 
+// WithText is used as an argument for NewTextNode. It helps create a new text node with
+// the specified text
 func WithText(text string) TextNodeOption {
 	return func (node *TextNode) {
 		node.Text = text
 	}
 }
 
+// String returns rendered template as a string
 func (r *TextNode) String() string {
 	return r.Text
 }
+
 
