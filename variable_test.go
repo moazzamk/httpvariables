@@ -401,6 +401,34 @@ var reqReplaceVarsTests = []variableReplaceTest{
 			chunk("<root><node>abcdef</node></root>") + chunk(""),
 	},
 
+	// TODO: Add a request with this json body: {"foo": "{array[1]}", and use these variables {"array": [1,2,3]}. The result body should be {"foo": 2}.
+
+	{
+		Description: "Add a request with this json body: {\"foo\": \"{array[1]}\"",
+		Req: &http.Request{
+			Method: "POST",
+			URL: &url.URL{
+				Scheme: "http",
+				Host:   "www.google.com",
+				Path:   "/search",
+			},
+			ProtoMajor:       1,
+			ProtoMinor:       1,
+			Header:           http.Header{},
+			Close:            true,
+			TransferEncoding: []string{"chunked"},
+		},
+		Body: []byte("{\"foo\": \"{array[1]}\"}"),
+		Variables: `{"array": [1,2,3]}`,
+		Expected: "POST /search HTTP/1.1\r\n" +
+			"Host: www.google.com\r\n" +
+			"User-Agent: Go-http-client/1.1\r\n" +
+			"Connection: close\r\n" +
+			"Transfer-Encoding: chunked\r\n" +
+			"Accept-Encoding: gzip\r\n\r\n" +
+			chunk("{\"foo\": \"2\"}") + chunk(""),
+	},
+
 
 	// TODO: Add	 a request with url encoded body and replace variables on it.
 	// TODO: Add a request with this header: "Authorization: Bearer {apikey}" and apikey = "123". Result header should be "Authorization: Bearer 123".
@@ -448,6 +476,34 @@ var reqReplaceVarsTests = []variableReplaceTest{
 	    "Transfer-Encoding: chunked\r\n" +
 	    "Accept-Encoding: gzip\r\n\r\n" +
 	    chunk("abcdef") + chunk(""),
+	},
+	{
+		Description: "Block node",
+		Req: &http.Request{
+			Method: "POST",
+			URL: &url.URL{
+				Scheme: "http",
+				Host:   "www.google.com",
+				Path:   "/search",
+			},
+			ProtoMajor:       1,
+			ProtoMinor:       1,
+			Header:           http.Header{},
+			Close:            true,
+			TransferEncoding: []string{"chunked"},
+		},
+		Body: []byte("{#key}}{{key}}{/key}}"),
+		Variables: `{
+	    "key": "body",
+	    "body": "abcdef"
+	  }`,
+		Expected: "POST /search HTTP/1.1\r\n" +
+			"Host: www.google.com\r\n" +
+			"User-Agent: Go-http-client/1.1\r\n" +
+			"Connection: close\r\n" +
+			"Transfer-Encoding: chunked\r\n" +
+			"Accept-Encoding: gzip\r\n\r\n" +
+			chunk("abcdef") + chunk(""),
 	},
 	// TODO: Add a request with form-data body(no file) and replace variables on it.
 	// TODO: Add a request with form-data body(Should have a file, file doesn't need to a be a variable but you need to make sure the file is still there after replacing variables) and replace variables on it.

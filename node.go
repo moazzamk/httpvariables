@@ -60,7 +60,7 @@ func WithActionText(nodeText string) ActionNodeOption {
 	}
 }
 
-// WithActionType is used as an argument for NewActionNode. It helps create a new action node with
+// WithActionDictionary is used as an argument for NewActionNode. It helps create a new action node with
 // the specified dictionary (of template variables)
 func WithActionDictionary(dict map[string]interface{}) ActionNodeOption {
 	return func (node *ActionNode) {
@@ -89,10 +89,11 @@ type TextNodeOption func(node *TextNode)
 
 // A regular text node
 type TextNode struct {
-	Text string
+	bytes []byte
 }
 
-// NewTextNode returns a new text node
+
+// NewTextNode returns a new instance of a TextNode
 func NewTextNode(options ...TextNodeOption) *TextNode {
 	ret := &TextNode{}
 
@@ -107,13 +108,93 @@ func NewTextNode(options ...TextNodeOption) *TextNode {
 // the specified text
 func WithText(text string) TextNodeOption {
 	return func (node *TextNode) {
-		node.Text = text
+		node.bytes = []byte(text)
+	}
+}
+
+// WithBytes returns an option for TextNode when creating a new text node
+func WithBytes(bytes []byte) TextNodeOption {
+	return func (node *TextNode) {
+		node.bytes = bytes
 	}
 }
 
 // String returns rendered template as a string
 func (r *TextNode) String() string {
-	return r.Text
+	return string(r.bytes)
 }
 
+func (r *TextNode) Bytes() []byte {
+	return r.bytes
+}
 
+// BlockExpressionEvaluator is a function that evaluates the expression given to BlockNode
+type BlockExpressionEvaluator func (string) bool
+type BlockNodeOption func (node *BlockNode)
+type BlockNode struct {
+	evaluator BlockExpressionEvaluator
+	expression string
+	children []Node
+	dict map[string]interface{}
+}
+
+// NewBlockNode returns a new instance of BlockNode
+func NewBlockNode(options ...BlockNodeOption) *BlockNode {
+	ret := &BlockNode{}
+	for _, val := range options {
+		val(ret)
+	}
+
+	return ret
+}
+
+// WithDict is used as an argument for NewBlock. It helps create a new block node with
+// the specified dictionary (of template variables)
+func WithDict(dict map[string]interface{}) BlockNodeOption {
+	return func(node *BlockNode) {
+		node.dict = dict
+	}
+}
+
+// WithDict is used as an argument for NewBlock. It helps create a new block node with
+// the specified expression (of template variables)
+func WithExpression(expression string) BlockNodeOption {
+	return func(node *BlockNode) {
+		node.expression = expression
+	}
+}
+
+// Expression() gets the variable that needs to exist in data dictionary
+// for block node to render child block
+func (r *BlockNode) Expression() string {
+	return r.expression
+}
+
+// SetExpression() sets the variable that needs to exist in data dictionary
+// for block node to render child block
+func (r *BlockNode) SetExpression(val string) *BlockNode {
+	r.expression = val
+
+	return r
+}
+
+// AddChild adds a child node to BlockNode
+func (r *BlockNode) AddChild(node Node) {
+	r.children = append(r.children, node)
+}
+
+// String returns rendered template of block node. If expression is blank string then rendered block is returned.
+// If expression for this BlockNode is not empty string then the variable in the expression must exist in data dictionary
+// for the block to be rendered
+func (r *BlockNode) String() string {
+	if _, ok := r.dict[r.expression]; r.expression != `` && !ok {
+		return ``
+	}
+
+	ret := ``
+	for _, val := range r.children {
+		ret += val.String()
+	}
+
+	return ret
+}

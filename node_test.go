@@ -25,3 +25,45 @@ func Test_ActionNode_variable_of_variable_syntax(t *testing.T) {
 
 	assert.Equal(t, "c", node.String())
 }
+
+func Test_BlockNode_is_initializable(t *testing.T) {
+	assert.IsType(t, &BlockNode{}, NewBlockNode())
+}
+
+func Test_BlockNode_renders_children(t *testing.T) {
+	node := NewTextNode(WithText("hello"))
+	parent := NewBlockNode()
+
+	parent.AddChild(node)
+
+	assert.Equal(t, "hello", parent.String())
+}
+
+func Test_BlockNode_wont_render_children_if_expression_doesnt_return_true(t *testing.T) {
+	dict := make(map[string]interface{})
+	dict["hi"] = "hello"
+
+	node := NewBlockNode(WithDict(dict),
+						WithExpression("yo"))
+	parent := NewBlockNode()
+
+	parent.AddChild(node)
+
+	assert.Equal(t, "", parent.String())
+
+}
+
+func Test_BlockNode_renders_children_if_expression_returns_true(t *testing.T) {
+	dict := make(map[string]interface{})
+	dict["hi"] = "hello"
+
+	node := NewTextNode(WithText("jojo"))
+	parent := NewBlockNode(WithDict(dict),
+							WithExpression("hi"))
+
+	parent.AddChild(node)
+
+	assert.Equal(t, "jojo", parent.String())
+}
+
+

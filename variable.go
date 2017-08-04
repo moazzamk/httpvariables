@@ -18,10 +18,8 @@ const (
 
 )
 
-// TODO: implement replace variables functions.
-// Variables are valid json, they can be either an array or object.
-
 // Replaces template variables in a request.
+// Check ReplaceVariable() to see how templates get populated
 func PopulateRequestTemplate(req *http.Request, variables string) {
 	if variables == `` {
 		return
@@ -50,18 +48,25 @@ func PopulateRequestTemplate(req *http.Request, variables string) {
 }
 
 // Replaces templates variables in a string
+// Examples:
+// {key} - will be replaced with a template variable called key
+// {{key}} - if {key: val, val: yo} map was provided then yo will replace {{key}}
+// {#key}} hi {/key}} - hi will be rendered if key variable was provided as a template variable
+
 func ReplaceVariable(input string, variableData map[string]interface{}) string {
-	var ret bytes.Buffer
-	var nodes []Node
+
+	rootNode := NewBlockNode()
+	parentNodes := []*BlockNode{rootNode}
+	currentParentNode := rootNode
 
 	codeReader := strings.NewReader(input)
 	scn := bufio.NewScanner(codeReader)
 	scn.Split(func (data []byte, atEOF bool) (advance int, token []byte, err error) {
-		if atEOF && len(data) == 0 {
+		lenny := len(data)
+		if atEOF && lenny == 0 {
 			return 0, nil, nil
 		}
 
-		lenny := len(data)
 		if data[0] == 123 {
 			for i, val := range data {
 				if val == 125 {
@@ -98,6 +103,31 @@ func ReplaceVariable(input string, variableData map[string]interface{}) string {
 			case Brace:
 				nodeType = DoubleAction
 				offset = 2
+
+			case FSlash:
+				nodeExpression := string(byties[2:bytiesLen-2])
+				if nodeExpression != currentParentNode.Expression() {
+					panic("Expected end block for " + currentParentNode.Expression() + " found end block for " + nodeExpression)
+				}
+
+				parentNodes = parentNodes[0:len(parentNodes)-1]
+				currentParentNode = parentNodes[len(parentNodes)-1]
+
+				continue
+
+			case Hash:
+				nodeType = BlockTextNode
+				offset = 2
+
+				node := NewBlockNode(WithDict(variableData),
+									WithExpression((string(byties[offset:bytiesLen-offset]))))
+
+				currentParentNode.AddChild(node)
+				parentNodes = append(parentNodes, node)
+				currentParentNode = node
+
+				continue
+
 			default:
 				nodeType = SingleAction
 				offset = 1
@@ -105,13 +135,13 @@ func ReplaceVariable(input string, variableData map[string]interface{}) string {
 
 			node := NewActionNode(WithActionType(nodeType),
 								WithActionDictionary(variableData),
-								WithActionText(strings.Trim(string(byties[offset:bytiesLen-offset]), ` `)))
+								WithActionText((string(byties[offset:bytiesLen-offset]))))
 
-			nodes = append(nodes, node)
+			currentParentNode.AddChild(node)
 
 		} else {
 			node := NewTextNode(WithText(string(byties)))
-			nodes = append(nodes, node)
+			currentParentNode.AddChild(node)
 		}
 
 	}
@@ -120,13 +150,5 @@ func ReplaceVariable(input string, variableData map[string]interface{}) string {
 	//	fmt.Println("|" + val.String() + "|")
 	//}
 
-	for _, node := range nodes {
-		ret.WriteString(node.String())
-	}
-
-
-//	fmt.Println("RERERERER", input, ret.String())
-
-	return ret.String()
-
+	return rootNode.String()
 }
